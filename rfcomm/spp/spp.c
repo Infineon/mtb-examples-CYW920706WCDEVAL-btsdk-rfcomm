@@ -242,6 +242,32 @@ uint64_t clock_SystemTimeMicroseconds64(void)
  * Function Definitions
  ******************************************************************/
 
+void buffer_report(char *msg)
+{
+    wiced_bt_buffer_statistics_t buffer_stats[4];
+    wiced_result_t result;
+
+    result = wiced_bt_get_buffer_usage (buffer_stats, sizeof(buffer_stats));
+
+    if (result == WICED_BT_SUCCESS)
+    {
+        WICED_BT_TRACE("%s: pool %x %d %d/%d/%d\n", msg,
+                buffer_stats[1].pool_id,
+                buffer_stats[1].pool_size,
+                buffer_stats[1].current_allocated_count,
+                buffer_stats[1].max_allocated_count,
+                buffer_stats[1].total_count);
+        WICED_BT_TRACE("%s: pool %x %d %d/%d/%d\n", msg,
+                buffer_stats[2].pool_id,
+                buffer_stats[2].pool_size,
+                buffer_stats[2].current_allocated_count,
+                buffer_stats[2].max_allocated_count,
+                buffer_stats[2].total_count);
+    }
+    else
+        WICED_BT_TRACE("buffer_report: wiced_bt_get_buffer_usage failed, returned %d\n", result);
+}
+
 /*
  * Entry point to the application. Set device configuration and start BT
  * stack initialization.  The actual application initialization will happen
@@ -493,7 +519,7 @@ void app_timeout(uint32_t count)
 {
     static uint32_t timer_count = 0;
     timer_count++;
-    WICED_BT_TRACE("app_timeout: %d\n", timer_count);
+    WICED_BT_TRACE("app_timeout: %d, handle %d \n", timer_count, spp_handle);
     if (spp_handle != 0)
     {
         wiced_bt_spp_send_session_data(spp_handle, (uint8_t *)&timer_count, sizeof(uint32_t));
@@ -535,12 +561,13 @@ wiced_bool_t spp_rx_data_callback(uint16_t handle, uint8_t* p_data, uint32_t dat
 //                   buffer_stats[1].current_allocated_count, buffer_stats[1].max_allocated_count,
 //                   buffer_stats[2].current_allocated_count, buffer_stats[2].max_allocated_count,
 //                   buffer_stats[3].current_allocated_count, buffer_stats[3].max_allocated_count);
+//    buffer_report("spp_rx_data_callback");
 
 //    wiced_result_t wiced_bt_get_buffer_usage (&buffer_stats, sizeof(buffer_stats));
 
-//    WICED_BT_TRACE("%s handle:%d len:%d %02x-%02x\n", __FUNCTION__, handle, data_len, p_data[0], p_data[data_len - 1]);
-
     spp_rx_bytes += data_len;
+
+    WICED_BT_TRACE("%s handle:%d len:%d %02x-%02x, total rx %d\n", __FUNCTION__, handle, data_len, p_data[0], p_data[data_len - 1], spp_rx_bytes);
 
 #if LOOPBACK_DATA
     wiced_bt_spp_send_session_data(handle, p_data, data_len);
@@ -583,20 +610,34 @@ int app_read_nvram(int nvram_id, void *p_data, int data_len)
 void app_send_data(void)
 {
     int i;
+    wiced_bool_t ret;
 
-    while ((spp_handle != 0) && wiced_bt_spp_can_send_more_data(spp_handle) && (app_send_offset != APP_TOTAL_DATA_TO_SEND))
+    while ((spp_handle != 0) && (app_send_offset != APP_TOTAL_DATA_TO_SEND))
     {
         int bytes_to_send = app_send_offset + SPP_MAX_PAYLOAD < APP_TOTAL_DATA_TO_SEND ? SPP_MAX_PAYLOAD : APP_TOTAL_DATA_TO_SEND - app_send_offset;
+        ret = wiced_bt_spp_can_send_more_data(spp_handle);
+        if(!ret)
+        {
+            // buffer_report(" app_send_data can't send");
+            // WICED_BT_TRACE(" ! return from wiced_bt_spp_can_send_more_data\n");
+            break;
+        }
         for (i = 0; i < bytes_to_send; i++)
         {
             app_send_buffer[i] = app_send_offset + i;
         }
-        wiced_bt_spp_send_session_data(spp_handle, app_send_buffer, bytes_to_send);
+        ret = wiced_bt_spp_send_session_data(spp_handle, app_send_buffer, bytes_to_send);
+        if(ret != WICED_TRUE)
+        {
+            // WICED_BT_TRACE(" ! return from wiced_bt_spp_send_session_data\n");
+            break;
+        }
         app_send_offset += bytes_to_send;
     }
     // Check if we were able to send everything
     if (app_send_offset < APP_TOTAL_DATA_TO_SEND)
     {
+        WICED_BT_TRACE("wiced_start_timer app_tx_timer %d\n", app_send_offset);
         wiced_start_timer(&app_tx_timer, 5);
     }
     else

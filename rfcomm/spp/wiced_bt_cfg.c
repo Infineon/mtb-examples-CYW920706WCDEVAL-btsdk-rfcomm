@@ -211,13 +211,8 @@ const wiced_bt_cfg_buf_pool_t wiced_bt_cfg_buf_pools[WICED_BT_CFG_NUM_BUF_POOLS]
 {
 /*  { buf_size, buf_count, }, */
     { 64,       16,        }, /* Small Buffer Pool */
-#ifdef CYW20819A1
-    { 360,      10,         }, /* Medium Buffer Pool (used for HCI & RFCOMM control messages, min recommended size is 360) */
-    { 1056,     3   },      /* Large Buffer Pool  (used for HCI ACL messages) */
-#else
     { 360,      40,         }, /* Medium Buffer Pool (used for HCI & RFCOMM control messages, min recommended size is 360) */
     { 1056,     6,         }, /* Large Buffer Pool  (used for HCI ACL messages) */
-#endif
     { 1056,     1,         }, /* Extra Large Buffer Pool (used for SDP Discovery) */
 
 };

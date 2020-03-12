@@ -228,6 +228,7 @@ static void wiced_bt_pbc_clear_pending_req(void)
 
 uint8_t wiced_bt_pbc_is_connected()
 {
+    WICED_BT_TRACE("wiced_bt_pbc_is_connected %d", wiced_bt_pbc_sv_cb.state_bitfield);
     return (wiced_bt_pbc_sv_cb.state_bitfield == WICED_BT_PBC_OPENED);
 }
 
@@ -1088,7 +1089,7 @@ void wiced_bt_pbc_event_callback(wiced_bt_pbc_evt_t event, wiced_bt_pbc_t* p_buf
     case WICED_BT_PBC_GETFILE_EVT:
         WICED_BT_TRACE("WICED_BT_PBC_GETFILE_EVT event status = %d",p_buffer->status);
         wiced_bt_pbc_clear_pending_req();
-        if (wiced_bt_pbc_is_connected() >= 0)
+        if (wiced_bt_pbc_is_connected())
         {
             byteval = p_buffer->status;
             switch (p_buffer->status)

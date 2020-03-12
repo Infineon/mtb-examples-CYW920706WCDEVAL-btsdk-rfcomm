@@ -50,7 +50,8 @@ SUPPORTED_TARGETS = \
   CYW920721B2EVK-02 \
   CYW920719B2Q40EVB-01 \
   CYW920706WCDEVAL \
-  CYBT-353027-EVAL
+  CYBT-353027-EVAL \
+  CYBT-343026-EVAL
 
 TARGET_DEVICE_MAP = \
   CYW920721B2EVK-01/20721B2 \
@@ -58,7 +59,8 @@ TARGET_DEVICE_MAP = \
   CYW920721B2EVK-02/20721B2 \
   CYW920719B2Q40EVB-01/20719B2 \
   CYW920706WCDEVAL/20706A2 \
-  CYBT-353027-EVAL/20706A2
+  CYBT-353027-EVAL/20706A2 \
+  CYBT-343026-EVAL/20706A2
 
 CY_TARGET_DEVICE = $(patsubst $(TARGET)/%,%,$(filter $(TARGET)%,$(TARGET_DEVICE_MAP)))
 
@@ -124,6 +126,8 @@ CY_APP_PATH=.
 
 # Path (absolute or relative) to the bt-sdk folder (at repo root)
 CY_SHARED_PATH=$(CY_APP_PATH)/../../../wiced_btsdk
+# absolute path to the root of the BTSDK
+CY_SHARED_PATH_ABS=$(CURDIR)/../../../wiced_btsdk
 
 # Path (absolute or relative) to the base library
 CY_BASELIB_PATH=$(CY_SHARED_PATH)/dev-kit/baselib/$(CY_TARGET_DEVICE)
