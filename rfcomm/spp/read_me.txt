@@ -35,3 +35,4 @@ To demonstrate the app, work through the following steps.
 Notes
 -----
 See the spp.c file for compile flag options for different modes of testing.
+CYW9M2BASE-43012BT does not support SEND_DATA_ON_INTERRUPT because the platform does not have button connected to BT board.

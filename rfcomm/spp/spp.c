@@ -87,7 +87,12 @@
 
 
 #define HCI_TRACE_OVER_TRANSPORT            1   // If defined HCI traces are send over transport/WICED HCI interface
+// CYW9M2BASE-43012BT does not support SEND_DATA_ON_INTERRUPT because the platform does not have button connected to BT board.
+#if !defined (NO_BUTTON_SUPPORT)
 #define SEND_DATA_ON_INTERRUPT              1   // If defined application button causes 1Meg of data to be sent
+#else
+#define SEND_DATA_ON_INTERRUPT              0
+#endif
 #define SEND_DATA_ON_TIMEOUT              1   // If defined application sends 4 bytes of data every second
 //#define LOOPBACK_DATA                     1   // If defined application loops back received data
 
@@ -286,10 +291,14 @@ APPLICATION_START()
     // Set the debug uart as WICED_ROUTE_DEBUG_NONE to get rid of prints
     // wiced_set_debug_uart(WICED_ROUTE_DEBUG_NONE);
 
+#ifdef NO_PUART_SUPPORT
+    wiced_set_debug_uart( WICED_ROUTE_DEBUG_TO_WICED_UART );
+#else
     // Set to PUART to see traces on peripheral uart(puart)
     wiced_set_debug_uart( WICED_ROUTE_DEBUG_TO_PUART );
 #if defined (CYW20706A2)
     wiced_hal_puart_select_uart_pads( WICED_PUART_RXD, WICED_PUART_TXD, 0, 0);
+#endif
 #endif
 
     // Set to HCI to see traces on HCI uart - default if no call to wiced_set_debug_uart()
@@ -332,11 +341,10 @@ void application_init(void)
 #else
     wiced_hal_gpio_configure_pin( WICED_GPIO_BUTTON, WICED_GPIO_BUTTON_SETTINGS( GPIO_EN_INT_RISING_EDGE ), WICED_GPIO_BUTTON_DEFAULT_STATE );
     wiced_hal_gpio_register_pin_for_interrupt(WICED_GPIO_BUTTON, app_interrupt_handler, NULL);
-#endif
-
+#endif // CYW20706A2 && CYW43012C0
     // init timer that we will use for the rx data flow control.
     wiced_init_timer(&app_tx_timer, app_tx_ack_timeout, 0, WICED_MILLI_SECONDS_TIMER);
-#endif
+#endif // SEND_DATA_ON_INTERRUPT
 
     app_write_eir();
 
