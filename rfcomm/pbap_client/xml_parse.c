@@ -50,6 +50,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "xml_pars_api.h"
+#include "wiced_bt_utils.h"
 
 #ifndef BIP_TRACE_XML
 #define BIP_TRACE_XML FALSE
@@ -170,8 +171,6 @@ static BOOLEAN xml_etag_elem(tXML_MUL_STATE *);
 #define XML_SET_CLEAR   0
 #define XML_SET_NAME    1
 #define XML_SET_VALUE   2
-
-extern unsigned long utl_strtoul(const char *nptr, char **endptr, int base);
 
 
 /*****************************************************************************

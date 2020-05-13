@@ -101,7 +101,7 @@
 
 /* Max TX packet to be sent over SPP */
 #define MAX_TX_BUFFER                       1017
-#define TRANS_MAX_BUFFERS                   10
+#define TRANS_MAX_BUFFERS                   2
 #define TRANS_UART_BUFFER_SIZE              1024
 #define SPP_MAX_PAYLOAD                     1007
 
@@ -527,10 +527,13 @@ void app_timeout(uint32_t count)
 {
     static uint32_t timer_count = 0;
     timer_count++;
+    wiced_bool_t ret;
     WICED_BT_TRACE("app_timeout: %d, handle %d \n", timer_count, spp_handle);
     if (spp_handle != 0)
     {
-        wiced_bt_spp_send_session_data(spp_handle, (uint8_t *)&timer_count, sizeof(uint32_t));
+        ret = wiced_bt_spp_send_session_data(spp_handle, (uint8_t *)&timer_count, sizeof(uint32_t));
+        if (ret != WICED_TRUE)
+            WICED_BT_TRACE("wiced_bt_spp_send_session_data failed, ret = %d\n", ret);
     }
 }
 #endif
@@ -578,9 +581,10 @@ wiced_bool_t spp_rx_data_callback(uint16_t handle, uint8_t* p_data, uint32_t dat
     WICED_BT_TRACE("%s handle:%d len:%d %02x-%02x, total rx %d\n", __FUNCTION__, handle, data_len, p_data[0], p_data[data_len - 1], spp_rx_bytes);
 
 #if LOOPBACK_DATA
-    wiced_bt_spp_send_session_data(handle, p_data, data_len);
-#endif
+    return wiced_bt_spp_send_session_data(handle, p_data, data_len);
+#else
     return WICED_TRUE;
+#endif
 }
 
 /*

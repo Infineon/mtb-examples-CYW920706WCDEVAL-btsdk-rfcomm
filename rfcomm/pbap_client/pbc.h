@@ -37,6 +37,7 @@
 #include "wiced_bt_cfg.h"
 #include "hci_control_api.h"
 #include "wiced_bt_pbc_int.h"
+#include "wiced_bt_utils.h"
 
 #define WICED_BT_PBC_LIST_DIR_LEN_MAX           512
 #define WICED_BT_PBC_MAX_REALM_LEN              30
@@ -309,8 +310,6 @@ typedef union
 extern void     wiced_bt_trace_array( const char *string, const uint8_t* array, const uint16_t len );
 extern uint16_t wiced_app_cfg_sdp_record_get_size(void);
 extern void *GKI_getbuf (uint16_t);
-extern void GKI_freebuf (void *memPtr);
-extern char *utl_strcpy( char *p_dst, char *p_src );
 extern int hci_control_find_nvram_id(uint8_t *p_data, int len);
 extern int hci_control_alloc_nvram_id( );
 extern int hci_control_write_nvram( int nvram_id, int data_len, void *p_data, BOOLEAN from_host );

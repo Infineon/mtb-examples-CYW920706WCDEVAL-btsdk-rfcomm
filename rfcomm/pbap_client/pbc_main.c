@@ -94,6 +94,7 @@
 #include "wiced_hal_nvram.h"
 #include "wiced_hal_puart.h"
 #include "wiced_bt_stack.h"
+#include "wiced_bt_utils.h"
 
 /*******************************************************************************
  Definitions
@@ -186,7 +187,6 @@ const wiced_transport_cfg_t transport_cfg =
 
 uint8_t pairing_allowed = 0;
 
-extern int utl_strncmp(const char *s1, const char *s2, int n);
 /*******************************************************************************
  Functions
  *******************************************************************************/

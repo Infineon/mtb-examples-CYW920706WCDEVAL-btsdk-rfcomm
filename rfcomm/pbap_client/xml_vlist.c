@@ -123,8 +123,6 @@ static const tXML_VLIST_TTBL_ELEM xml_vlist_ttbl[XML_VLIST_TTBL_SIZE] =
 #define XML_VLIST_PTBL_SIZE 0x03
 typedef UINT8 * tXML_VLIST_PTBL_ELEM;
 
-int utl_strncmp(const char *s1, const char *s2, int n);
-
 static const tXML_VLIST_PTBL_ELEM xml_vlist_ptbl[XML_VLIST_PTBL_SIZE] =
 {
     (UINT8*) "\x01",                        /* \x00 */
