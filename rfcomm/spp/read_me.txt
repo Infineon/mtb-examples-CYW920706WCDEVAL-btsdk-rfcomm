@@ -18,18 +18,23 @@ Instructions
 ------------
 To demonstrate the app, work through the following steps.
 1. Build and download the application to the WICED board.
-2. Use standard terminal emulation application such as Term Term to open the WICED Peripheral UART, use
-   baud rate of 115200.
-3. On Windows 10 PCs, right click on the Bluetooth icon in the system tray and
+2. Open the BT/BLE Profile Client Control application and open the port for WICED HCI for the device.
+   Default baud rate configured in the application is defined by the BSP HCI_UART_DEAULT_BAUD #define,
+   usually either 3M or 115200 depending on board UART capabilities.
+3. Run the BTSpy program to view protocol and application traces.
+   See "BT/BLE Profile Client Control" and "BT Spy" in chip-specifc readme.txt for more information about these apps.
+4. On Windows 10 PCs, right click on the Bluetooth icon in the system tray and
    select 'Add a Bluetooth Device'. Find and pair with the spp app. That should create an incoming and an outgoing
    COM port on your computer. Right click on the Bluetooth icon in the system tray and
    select 'Open Settings', scroll down and select "More Bluetooth options" and then
    select the 'COM Ports' tab.
-4. Use application such as Term Term to open the outgoing COM port. Opening the port
+5. Use application such as Term Term to open the outgoing COM port. Opening the port
    will create the SPP connection.
-5. By default the spp application sends data on a timer to the peer application.
 6. Type any key on the terminal of the outgoing COM port, the spp application will receive the key.
-7. Press the application button on the WICED board to send 1 MB data to the Windows.
+7. By default, (SEND_DATA_ON_INTERRUPT=1) the application sends 1 MB data to the peer application on every
+   App button press on the WICED board.
+8. If desired, edit the spp.c file to configure the application to send data on a timer to the peer application by
+   setting SEND_DATA_ON_INTERRUPT=0 and SEND_DATA_ON_TIMEOUT=1
 
 
 Notes

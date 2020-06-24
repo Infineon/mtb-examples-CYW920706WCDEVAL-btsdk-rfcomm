@@ -1,5 +1,5 @@
 #
-# Copyright 2020, Cypress Semiconductor Corporation or a subsidiary of
+# Copyright 2016-2020, Cypress Semiconductor Corporation or a subsidiary of
 # Cypress Semiconductor Corporation. All Rights Reserved.
 #
 # This software, including source code, documentation and related
@@ -181,6 +181,9 @@ endif
 
 # path to WICED tools root folder
 CY_WICED_TOOLS_ROOT?=$(CY_SHARED_PATH)/dev-kit/btsdk-tools
+
+# tools that can be launched with "make open CY_OPEN_TYPE=<tool>
+CY_BT_APP_TOOLS=BTSpy ClientControl
 
 # getlibs path
 CY_GETLIBS_PATH=.

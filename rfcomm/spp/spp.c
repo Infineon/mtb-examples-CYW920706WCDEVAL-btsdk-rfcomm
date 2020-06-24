@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Cypress Semiconductor Corporation or a subsidiary of
+ * Copyright 2016-2020, Cypress Semiconductor Corporation or a subsidiary of
  * Cypress Semiconductor Corporation. All Rights Reserved.
  *
  * This software, including source code, documentation and related
@@ -43,26 +43,36 @@
  *  WICED_BT_TRACE_ENABLE    - enables WICED_BT_TRACEs.  You can also modify makefile.mk to build
  *                             with _debug version of the library
  *  SEND_DATA_ON_INTERRUPT   - if defined, the app will send 1Meg of data on application button push
- *  SEND_DATA_ON_TIMEOUT     - if enabled, the app will send 4 bytes every second while session is up
+ *  SEND_DATA_ON_TIMEOUT     - if defined, the app will send 4 bytes every second while session is up
  *  LOOPBACK_DATA            - if enabled, the app sends back received data
  *
  * To demonstrate the app, work through the following steps.
- * 1. Build and download the application to the WICED board
- * 2. Use standard terminal emulation application such as Term Term to open the WICED Peripheral UART, use
- *    baud rate of 115200.
- * 3. Us the computer's 'Add a Bluetooth Device' menu to pair with spp app. That should create an incoming
- *    and outgoing COM ports on your computer, see 'More Bluetooth options'
- * 4. Use application such as Term Term to open the outgoing COM port.
- * 5. By default the spp application sends data on a timer to the peer application.
- * 6. Type any keys on the terminal of the outgoing COM port, the spp application will receive the keys.
- * 7. Press the application button on the WICED board to send 1 MB data to the Windows application.
+ * 1. Build and download the application to the WICED board.
+ * 2. Open the BT/BLE Profile Client Control application and open the port for WICED HCI for the device.
+ *    Default baud rate configured in the application is defined by the BSP HCI_UART_DEAULT_BAUD #define,
+ *    usually either 3M or 115200 depending on board UART capabilities.
+ * 3. Run the BTSpy program to view protocol and application traces.
+ *    See "BT/BLE Profile Client Control" and "BT Spy" in chip-specifc readme.txt for more information about these apps.
+ * 4. On Windows 10 PCs, right click on the Bluetooth icon in the system tray and
+ *    select 'Add a Bluetooth Device'. Find and pair with the spp app. That should create an incoming and an outgoing
+ *    COM port on your computer. Right click on the Bluetooth icon in the system tray and
+ *    select 'Open Settings', scroll down and select "More Bluetooth options" and then
+ *    select the 'COM Ports' tab.
+ * 5. Use application such as Term Term to open the outgoing COM port. Opening the port
+ *    will create the SPP connection.
+ * 6. Type any key on the terminal of the outgoing COM port, the spp application will receive the key.
+ * 7. By default, (SEND_DATA_ON_INTERRUPT=1) the application sends 1 MB data to the peer application on every
+ *    App button press on the WICED board.
+ * 8. If desired, edit the spp.c file to configure the application to send data on a timer to the peer application by
+ *    setting SEND_DATA_ON_INTERRUPT=0 and SEND_DATA_ON_TIMEOUT=1*
  *
  * Features demonstrated
  *  - Use of SPP library
  *
  *  Note: This snippet app does not support WICED HCI Control and may use transport only for tracing.
  *  If you route traces to WICED HCI UART, use ClientControl app with baud rate equal to that
- *  set in the wiced_transport_cfg_t structure below (currently set at HCI_UART_DEFAULT_BAUD, i.e. 3 Mbps).
+ *  set in the wiced_transport_cfg_t structure below (currently set at HCI_UART_DEFAULT_BAUD, either 3 Mbps or 115200
+ *  depending on the capabilities of the board used).
  */
 
 #include "sparcommon.h"
@@ -87,13 +97,16 @@
 
 
 #define HCI_TRACE_OVER_TRANSPORT            1   // If defined HCI traces are send over transport/WICED HCI interface
+// configure either SEND_DATA_ON_INTERRUPT or SEND_DATA_ON_TIMEOUT, but not both
 // CYW9M2BASE-43012BT does not support SEND_DATA_ON_INTERRUPT because the platform does not have button connected to BT board.
 #if !defined (NO_BUTTON_SUPPORT)
 #define SEND_DATA_ON_INTERRUPT              1   // If defined application button causes 1Meg of data to be sent
 #else
 #define SEND_DATA_ON_INTERRUPT              0
 #endif
-#define SEND_DATA_ON_TIMEOUT              1   // If defined application sends 4 bytes of data every second
+#if defined(SEND_DATA_ON_INTERRUPT) && (SEND_DATA_ON_INTERRUPT==0)
+#define SEND_DATA_ON_TIMEOUT                1   // If defined application sends 4 bytes of data every second
+#endif
 //#define LOOPBACK_DATA                     1   // If defined application loops back received data
 
 #define WICED_EIR_BUF_MAX_SIZE              264
@@ -130,6 +143,8 @@ void app_timeout(uint32_t count);
 #define SPP_RFCOMM_SCN               1
 #endif
 
+#define MAX_TX_RETRY                 30
+#define TX_RETRY_TIMEOUT             100 // msec
 
 static void         spp_connection_up_callback(uint16_t handle, uint8_t* bda);
 static void         spp_connection_down_callback(uint16_t handle);
@@ -150,6 +165,7 @@ wiced_transport_buffer_pool_t*  host_trans_pool;
 uint16_t                        spp_handle = 0;
 wiced_timer_t                   app_tx_timer;
 uint32_t                        spp_rx_bytes = 0;
+uint32_t                        spp_tx_retry_count = 0;
 
 const uint8_t app_sdp_db[] = // Define SDP database
 {
@@ -249,7 +265,7 @@ uint64_t clock_SystemTimeMicroseconds64(void)
 
 void buffer_report(char *msg)
 {
-    wiced_bt_buffer_statistics_t buffer_stats[4];
+    wiced_bt_buffer_statistics_t buffer_stats[5];
     wiced_result_t result;
 
     result = wiced_bt_get_buffer_usage (buffer_stats, sizeof(buffer_stats));
@@ -291,13 +307,13 @@ APPLICATION_START()
     // Set the debug uart as WICED_ROUTE_DEBUG_NONE to get rid of prints
     // wiced_set_debug_uart(WICED_ROUTE_DEBUG_NONE);
 
+    // Set to PUART to see traces on peripheral uart(puart) if platform has PUART
 #ifdef NO_PUART_SUPPORT
-    wiced_set_debug_uart( WICED_ROUTE_DEBUG_TO_WICED_UART );
+    // wiced_set_debug_uart( WICED_ROUTE_DEBUG_TO_WICED_UART );
 #else
-    // Set to PUART to see traces on peripheral uart(puart)
-    wiced_set_debug_uart( WICED_ROUTE_DEBUG_TO_PUART );
+    // wiced_set_debug_uart( WICED_ROUTE_DEBUG_TO_PUART );
 #if defined (CYW20706A2)
-    wiced_hal_puart_select_uart_pads( WICED_PUART_RXD, WICED_PUART_TXD, 0, 0);
+    // wiced_hal_puart_select_uart_pads( WICED_PUART_RXD, WICED_PUART_TXD, 0, 0);
 #endif
 #endif
 
@@ -306,9 +322,7 @@ APPLICATION_START()
 
     // Use WICED_ROUTE_DEBUG_TO_WICED_UART to send formatted debug strings over the WICED
     // HCI debug interface to be parsed by ClientControl/BtSpy.
-    // Note: WICED HCI must be configured to use this - see wiced_trasnport_init(), must
-    // be called with wiced_transport_cfg_t.wiced_tranport_data_handler_t callback present
-    // wiced_set_debug_uart(WICED_ROUTE_DEBUG_TO_WICED_UART);
+    wiced_set_debug_uart(WICED_ROUTE_DEBUG_TO_WICED_UART);
 #endif
 
     WICED_BT_TRACE("APP Start\n");
@@ -329,6 +343,9 @@ void application_init(void)
 #if defined (CYW20706A2)
     /* Initialize wiced app */
     wiced_bt_app_init();
+
+    /* Initialize the RTC block */
+    rtc_init();
 #endif
 
 #if SEND_DATA_ON_INTERRUPT
@@ -555,6 +572,13 @@ void spp_connection_down_callback(uint16_t handle)
 {
     WICED_BT_TRACE("%s handle:%d rx_bytes:%d\n", __FUNCTION__, handle, spp_rx_bytes);
     spp_handle = 0;
+#if defined(SEND_DATA_ON_INTERRUPT) && (SEND_DATA_ON_INTERRUPT==1)
+    app_send_offset = 0;
+    spp_tx_retry_count = 0;
+
+    if(wiced_is_timer_in_use(&app_tx_timer))
+	wiced_stop_timer(&app_tx_timer);
+#endif
 }
 
 /*
@@ -645,12 +669,23 @@ void app_send_data(void)
             break;
         }
         app_send_offset += bytes_to_send;
+        spp_tx_retry_count = 0;
     }
     // Check if we were able to send everything
     if (app_send_offset < APP_TOTAL_DATA_TO_SEND)
     {
-        WICED_BT_TRACE("wiced_start_timer app_tx_timer %d\n", app_send_offset);
-        wiced_start_timer(&app_tx_timer, 5);
+        if(spp_tx_retry_count >= MAX_TX_RETRY)
+        {
+		WICED_BT_TRACE("Reached max tx retries! Terminating transfer!\n");
+		WICED_BT_TRACE("Make sure peer device is providing us credits\n");
+		app_send_offset = 0;
+        }
+        else
+        {
+            WICED_BT_TRACE("wiced_start_timer app_tx_timer %d\n", app_send_offset);
+		wiced_start_timer(&app_tx_timer, TX_RETRY_TIMEOUT);
+		spp_tx_retry_count++;
+        }
     }
     else
     {
